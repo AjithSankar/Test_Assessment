@@ -1,5 +1,6 @@
 package com.example.cucumberrest.service;
 
+import com.example.cucumberrest.model.TestRequest;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -9,15 +10,15 @@ import java.io.InputStreamReader;
 @Service
 public class TestExecutionService {
 
-    public String executeTests() {
+    public String executeTests(TestRequest testRequest) {
         try {
             System.out.println("calling TestExecutionService.executeTests()");
+            String command = createMvnTestCommand(testRequest);
+            System.out.println("executing command: " + command);
             // If running on Windows, use `cmd.exe /c mvn test` command
             // If running on Linux, use `mvn test` command
-            String cmd = "cmd.exe /c mvn test";  // Windows
             // Execute the `mvn test` command programmatically using ProcessBuilder
-            System.out.println("executing command: " + cmd);
-            Process process = Runtime.getRuntime().exec(cmd);
+            Process process = Runtime.getRuntime().exec(command);
 
             // Read the output of the command
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -50,6 +51,29 @@ public class TestExecutionService {
             // Handle exceptions if the command execution fails
             System.out.println("Test execution failed due to an exception: " + e);
             return "Test execution failed due to an exception , Please check the logs for more details ";
+        }
+    }
+
+    private String createMvnTestCommand(TestRequest testRequest) {
+        String mvnTestCommand = "cmd.exe /c mvn test "; // Windows
+        String cucumberOptions = "\"-Dcucumber.options=--tags ?\"";
+        String executionEnvironment = "\"-DexecutionEnvironment=sit\"";
+        String options = "'@" + testRequest.getTestType() + " and @" + testRequest.getServiceType()+ "'";
+        cucumberOptions = cucumberOptions.replace("?", options);
+        mvnTestCommand += cucumberOptions + " " + executionEnvironment;
+        return mvnTestCommand;
+    }
+
+    public void validateRequest(TestRequest testRequest) {
+
+        if (testRequest == null) {
+            throw new IllegalArgumentException("Test request cannot be null");
+        }
+        if (testRequest.getTestType() == null || testRequest.getTestType().isEmpty()) {
+            throw new IllegalArgumentException("Test type cannot be empty");
+        }
+        if (testRequest.getServiceType() == null || testRequest.getServiceType().isEmpty()) {
+            throw new IllegalArgumentException("Service type cannot be empty");
         }
     }
 }
