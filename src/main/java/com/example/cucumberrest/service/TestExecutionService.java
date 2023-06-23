@@ -1,11 +1,15 @@
 package com.example.cucumberrest.service;
 
 import com.example.cucumberrest.model.TestRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.async.DeferredResult;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class TestExecutionService {
@@ -13,9 +17,10 @@ public class TestExecutionService {
     public String executeTests(TestRequest testRequest) {
         try {
             System.out.println("calling TestExecutionService.executeTests()");
-            String command = createMvnTestCommand(testRequest);
-            System.out.println("executing command: " + command);
+            //String command = createMvnTestCommand(testRequest);
+
             // If running on Windows, use `cmd.exe /c mvn test` command
+            String command = "cmd.exe /c mvn test"; // Windows
             // If running on Linux, use `mvn test` command
             // Execute the `mvn test` command programmatically using ProcessBuilder
             Process process = Runtime.getRuntime().exec(command);
@@ -75,5 +80,47 @@ public class TestExecutionService {
         if (testRequest.getServiceType() == null || testRequest.getServiceType().isEmpty()) {
             throw new IllegalArgumentException("Service type cannot be empty");
         }
+    }
+
+    @Async
+    public DeferredResult<String> executeTestAsync(TestRequest testRequest) {
+
+        DeferredResult<String> deferredResult = new DeferredResult<>();
+
+        // Asynchronous method using CompletableFuture
+        CompletableFuture.supplyAsync(() -> executeTests(testRequest)).whenCompleteAsync((result, throwable) -> {
+            if (throwable != null) {
+                deferredResult.setErrorResult("An error occurred while executing mvn test command");
+            } else {
+                // Set the final result
+                System.out.println("final result : " + result);
+                deferredResult.setResult(result);
+
+            }
+        });
+
+        return deferredResult;
+    }
+
+    @Async
+    public String asyncTest(TestRequest testRequest) throws ExecutionException, InterruptedException {
+
+        System.out.println("calling TestService.asyncTest()");
+
+        // Asynchronous method using CompletableFuture
+        CompletableFuture<String> future = new CompletableFuture<>();
+
+        // Set an initial response
+        future.complete("Test execution started successfully, We will update test results when it is completed...");
+
+        // Perform the time-consuming operation asynchronously
+        CompletableFuture.runAsync(() -> {
+            String result = executeTests(testRequest);
+
+            // Set the final result
+            future.complete(result);
+        });
+
+        return future.get();
     }
 }
