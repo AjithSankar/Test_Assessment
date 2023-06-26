@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.async.DeferredResult;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -85,6 +87,8 @@ public class TestExecutionService {
     @Async
     public DeferredResult<String> executeTestAsync(TestRequest testRequest) {
 
+        writeTestPropertiesToFile(testRequest);
+
         DeferredResult<String> deferredResult = new DeferredResult<>();
 
         // Asynchronous method using CompletableFuture
@@ -100,6 +104,24 @@ public class TestExecutionService {
         });
 
         return deferredResult;
+    }
+
+    private void writeTestPropertiesToFile(TestRequest testRequest) {
+        Properties properties = new Properties();
+        String path = "src/test/resources/";
+        String fileName = "test.properties";
+
+        properties.setProperty("testType", testRequest.getTestType());
+        properties.setProperty("serviceType", testRequest.getServiceType());
+
+        // Save the properties to a .properties file
+        try (FileOutputStream outputStream = new FileOutputStream(path + fileName)) {
+            properties.store(outputStream, "Request Properties");
+            System.out.println("Test properties saved to file " + fileName);
+        } catch (IOException e) {
+            System.out.println("An error occurred while saving request properties to file: " + e);
+        }
+
     }
 
     @Async
